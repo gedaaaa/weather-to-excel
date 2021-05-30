@@ -25,8 +25,8 @@ async def get(url, params):
     try:
         response = await session.get(url=url, params=params)
         result = await response.text()
-    except:
-        print('network exception')
+    except Exception as e:
+        print('network exception', e)
         result = '{"code":"666"}'
     return result
 
@@ -63,8 +63,6 @@ def read_city_input():
 
 async def fetch_location_ids(city_id_and_name_list):
     result = {}
-    loop = asyncio.get_event_loop()
-    tasks = []
 
     async def async_execute(city):
         params = {'location': city[2], 'key': qweather_key}
@@ -77,8 +75,10 @@ async def fetch_location_ids(city_id_and_name_list):
         else:
             print('Network response with error: ' + response_data['code'])
 
-    for city in city_id_and_name_list:
-        tasks.append(loop.create_task(async_execute(city)))
+    tasks = [
+        asyncio.create_task(async_execute(city))
+        for city in city_id_and_name_list
+    ]
 
     try:
         await asyncio.wait(tasks)
@@ -88,8 +88,6 @@ async def fetch_location_ids(city_id_and_name_list):
 
 async def fetch_24h_weather_prediction(city_id_location_id_map):
     result = {}
-    loop = asyncio.get_event_loop()
-    tasks = []
 
     async def async_execute(city_id, location_id):
         params = {'location': str(location_id), 'key': qweather_key}
@@ -111,8 +109,10 @@ async def fetch_24h_weather_prediction(city_id_location_id_map):
         else:
             print('Network response with error: ' + response_data['code'])
 
-    for city_id, location_id in city_id_location_id_map.items():
-        tasks.append(loop.create_task(async_execute(city_id, location_id)))
+    tasks = [
+        asyncio.create_task(async_execute(city_id, location_id))
+        for city_id, location_id in city_id_location_id_map.items()
+    ]
 
     try:
         await asyncio.wait(tasks)
@@ -122,9 +122,6 @@ async def fetch_24h_weather_prediction(city_id_location_id_map):
 
 async def fetch_7d_weather_prediction(city_id_location_id_map):
     result = {}
-
-    loop = asyncio.get_event_loop()
-    tasks = []
 
     async def async_execute(city_id, location_id):
         params = {'location': str(location_id), 'key': qweather_key}
@@ -149,8 +146,10 @@ async def fetch_7d_weather_prediction(city_id_location_id_map):
         else:
             print('Network response with error: ' + response_data['code'])
 
-    for city_id, location_id in city_id_location_id_map.items():
-        tasks.append(loop.create_task(async_execute(city_id, location_id)))
+    tasks = [
+        asyncio.create_task(async_execute(city_id, location_id))
+        for city_id, location_id in city_id_location_id_map.items()
+    ]
 
     try:
         await asyncio.wait(tasks)
@@ -160,7 +159,7 @@ async def fetch_7d_weather_prediction(city_id_location_id_map):
 
 def generate_header():
     head = ['city_id', '省', '城市']
-    head.extend(['' for i in range(24 + 7 * 2)])
+    head.extend(['' for _ in range(24 + 7 * 2)])
 
     now = datetime.datetime.now()
     for i in range(24):
@@ -194,7 +193,7 @@ def color_cells(sheet):
                     cell.fill = special
 
 
-def generate_city_row(city,city_hourly_predict,city_daily_predict):
+def generate_city_row(city, city_hourly_predict, city_daily_predict):
     row = []
     row.extend(city)
 
@@ -252,4 +251,3 @@ async def generate_weather_report():
 
 if __name__ == '__main__':
     asyncio.run(generate_weather_report())
-
