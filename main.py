@@ -7,9 +7,8 @@ import aiohttp
 import os
 
 input_excel_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'city-list.xlsx')
-print(input_excel_path)
 
-output_excel_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),  'weather_predict.xlsx')
+output_excel_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),  'weather-predict.xlsx')
 
 qweather_key = 'your-key'
 
@@ -28,7 +27,7 @@ async def get(url, params):
         result = await response.text()
     except:
         print('network exception')
-        result = '{"code":"500"}'
+        result = '{"code":"666"}'
     return result
 
 
@@ -74,16 +73,17 @@ async def fetch_location_ids(city_id_and_name_list):
         if response_data['code'] == '200':
             print('location id for city: ' + city_id_name_map.get(city[0], ''))
             # DIDI city id: Location id
-            result[city[0]] = response_data['location'][0]['id']
+            result[city[0]] = response_data.get('location', [])[0].get('id', None)
         else:
             print('Network response with error: ' + response_data['code'])
 
     for city in city_id_and_name_list:
         tasks.append(loop.create_task(async_execute(city)))
 
-    await asyncio.wait(tasks)
-
-    return result
+    try:
+        await asyncio.wait(tasks)
+    finally:
+        return result
 
 
 async def fetch_24h_weather_prediction(city_id_location_id_map):
@@ -98,18 +98,26 @@ async def fetch_24h_weather_prediction(city_id_location_id_map):
         city_data = []
         if response_data['code'] == '200':
             print('hourly data for city: ' + city_id_name_map.get(city_id, ''))
-            for data in response_data['hourly']:
-                city_data.append({'fx_time': data['fxTime'], 'text': data['text'], 'wind': data['windScale']})
+
+            for data in response_data.get('hourly', []):
+                city_data.append({
+                    'fx_time': data.get('fxTime', None),
+                    'text': data.get('text', None),
+                    'wind': data.get('windScale', None)
+                })
+
             result[city_id] = city_data
+
         else:
             print('Network response with error: ' + response_data['code'])
 
     for city_id, location_id in city_id_location_id_map.items():
         tasks.append(loop.create_task(async_execute(city_id, location_id)))
 
-    await asyncio.wait(tasks)
-
-    return result
+    try:
+        await asyncio.wait(tasks)
+    finally:
+        return result
 
 
 async def fetch_7d_weather_prediction(city_id_location_id_map):
@@ -127,25 +135,27 @@ async def fetch_7d_weather_prediction(city_id_location_id_map):
         if response_data['code'] == '200':
             print('daily data for city: ' + city_id_name_map.get(city_id, ''))
 
-            for data in response_data['daily']:
-                city_data.append(
-                    {
-                        'fx_date': data['fxDate'],
-                        'text_day': data['textDay'],
-                        'text_night': data['textNight'],
-                        'wind_day': data['windScaleDay'],
-                        'wind_night': data['windScaleNight'],
-                    })
+            for data in response_data.get('daily', []):
+                city_data.append({
+                    'fx_date': data.get('fxDate', None),
+                    'text_day': data.get('textDay', None),
+                    'text_night': data.get('textNight', None),
+                    'wind_day': data.get('windScaleDay', None),
+                    'wind_night': data.get('windScaleNight', None)
+                })
 
             result[city_id] = city_data
+
         else:
             print('Network response with error: ' + response_data['code'])
 
     for city_id, location_id in city_id_location_id_map.items():
         tasks.append(loop.create_task(async_execute(city_id, location_id)))
-    await asyncio.wait(tasks)
 
-    return result
+    try:
+        await asyncio.wait(tasks)
+    finally:
+        return result
 
 
 def generate_header():
@@ -156,23 +166,24 @@ def generate_header():
     for i in range(24):
         head[3 + i] = (now + datetime.timedelta(hours=i)).strftime("%m-%d %H:00")
     for i in range(7):
-        head[27 + 2 * i] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 白天'
-        head[27 + 2 * i + 1] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 夜间'
+        head[3 + 24 + 2 * i] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 白天'
+        head[3 + 24 + 2 * i + 1] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 夜间'
     return head
 
 
 def color_cells(sheet):
-    very_high = PatternFill("solid", fgColor="8E44AD")
-    high = PatternFill("solid", fgColor="E74C3C")
-    mid = PatternFill("solid", fgColor="F1C40F")
-    low = PatternFill("solid", fgColor="3498DB")
-    special = PatternFill("solid", fgColor="E59866")
+    very_high = PatternFill("solid", fgColor="8E44AD")  # purple
+    high = PatternFill("solid", fgColor="E74C3C")  # red
+    mid = PatternFill("solid", fgColor="F1C40F")  # yellow
+    low = PatternFill("solid", fgColor="3498DB")  # blue
+    special = PatternFill("solid", fgColor="E59866")  # orange
 
     for row in sheet.iter_rows(min_col=4):
         for cell in row:
+            if cell.value is None:
+                break
             if '雨' in cell.value or '雪' in cell.value:
-                if '小' in cell.value:
-                    cell.fill = low
+                cell.fill = low
                 if '中' in cell.value:
                     cell.fill = mid
                 if '大' in cell.value:
@@ -221,7 +232,7 @@ async def generate_weather_report():
 
         print('--- start ---')
 
-        print('--- format input file ---')
+        print('--- format input file, sometime very slow ---')
         remove_empty_lines()
 
         print('--- read input ---')
@@ -240,6 +251,5 @@ async def generate_weather_report():
     print('--- FINISH ---')
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    res = loop.run_until_complete(generate_weather_report())
+    asyncio.run(generate_weather_report())
 
