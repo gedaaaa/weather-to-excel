@@ -23,8 +23,12 @@ global session
 
 async def get(url, params):
     global session
-    response = await session.get(url=url, params=params)
-    result = await response.text()
+    try:
+        response = await session.get(url=url, params=params)
+        result = await response.text()
+    except:
+        print('network exception')
+        result = '{"code":"500"}'
     return result
 
 
@@ -71,13 +75,13 @@ async def fetch_location_ids(city_id_and_name_list):
             print('location id for city: ' + city_id_name_map.get(city[0], ''))
             # DIDI city id: Location id
             result[city[0]] = response_data['location'][0]['id']
+        else:
+            print('Network response with error: ' + response_data['code'])
 
     for city in city_id_and_name_list:
         tasks.append(loop.create_task(async_execute(city)))
 
     await asyncio.wait(tasks)
-
-    # loop.run_until_complete()
 
     return result
 
@@ -97,13 +101,14 @@ async def fetch_24h_weather_prediction(city_id_location_id_map):
             for data in response_data['hourly']:
                 city_data.append({'fx_time': data['fxTime'], 'text': data['text'], 'wind': data['windScale']})
             result[city_id] = city_data
+        else:
+            print('Network response with error: ' + response_data['code'])
 
     for city_id, location_id in city_id_location_id_map.items():
         tasks.append(loop.create_task(async_execute(city_id, location_id)))
 
     await asyncio.wait(tasks)
 
-    # loop.run_until_complete(asyncio.wait(tasks))
     return result
 
 
@@ -133,12 +138,13 @@ async def fetch_7d_weather_prediction(city_id_location_id_map):
                     })
 
             result[city_id] = city_data
+        else:
+            print('Network response with error: ' + response_data['code'])
 
     for city_id, location_id in city_id_location_id_map.items():
         tasks.append(loop.create_task(async_execute(city_id, location_id)))
     await asyncio.wait(tasks)
 
-    # loop.run_until_complete(asyncio.wait(tasks))
     return result
 
 
@@ -210,26 +216,27 @@ def fill_name_map(city_id_name_list):
 
 async def generate_weather_report():
     global session
-    session = aiohttp.ClientSession()
+    try:
+        session = aiohttp.ClientSession()
 
-    print('--- start ---')
+        print('--- start ---')
 
-    print('--- format input file ---')
-    remove_empty_lines()
+        print('--- format input file ---')
+        remove_empty_lines()
 
-    print('--- read input ---')
-    city_id_name_list = read_city_input()
-    fill_name_map(city_id_name_list)
+        print('--- read input ---')
+        city_id_name_list = read_city_input()
+        fill_name_map(city_id_name_list)
 
-    print('--- fetch result for {} cities ---'.format(len(city_id_name_list)))
-    city_id_location_id_map = await fetch_location_ids(city_id_name_list)
-    city_hourly_predict = await fetch_24h_weather_prediction(city_id_location_id_map)
-    city_daily_predict = await fetch_7d_weather_prediction(city_id_location_id_map)
+        print('--- fetch result for {} cities ---'.format(len(city_id_name_list)))
+        city_id_location_id_map = await fetch_location_ids(city_id_name_list)
+        city_hourly_predict = await fetch_24h_weather_prediction(city_id_location_id_map)
+        city_daily_predict = await fetch_7d_weather_prediction(city_id_location_id_map)
 
-    print('--- generating excel output ---')
-    generate_report(city_id_name_list, city_hourly_predict, city_daily_predict)
-
-    await session.close()
+        print('--- generating excel output ---')
+        generate_report(city_id_name_list, city_hourly_predict, city_daily_predict)
+    finally:
+        await session.close()
     print('--- FINISH ---')
 
 if __name__ == '__main__':
