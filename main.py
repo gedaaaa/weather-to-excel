@@ -8,7 +8,7 @@ import os
 
 input_excel_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'city-list.xlsx')
 
-output_excel_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),  'weather-predict.xlsx')
+output_excel_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'weather-predict.xlsx')
 
 qweather_key = 'your-key'
 
@@ -245,9 +245,12 @@ async def generate_weather_report():
 
         print('--- generating excel output ---')
         generate_report(city_id_name_list, city_hourly_predict, city_daily_predict)
+
     finally:
         await session.close()
+
     print('--- FINISH ---')
+
 
 if __name__ == '__main__':
     asyncio.run(generate_weather_report())
