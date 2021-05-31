@@ -162,11 +162,12 @@ def generate_header():
     head.extend(['' for _ in range(24 + 7 * 2)])
 
     now = datetime.datetime.now()
-    for i in range(24):
-        head[3 + i] = (now + datetime.timedelta(hours=i)).strftime("%m-%d %H:00")
+
     for i in range(7):
-        head[3 + 24 + 2 * i] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 白天'
-        head[3 + 24 + 2 * i + 1] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 夜间'
+        head[3 + 2 * i] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 白天'
+        head[3 + 2 * i + 1] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 夜间'
+    for i in range(24):
+        head[3 + 7 * 2 + i] = (now + datetime.timedelta(hours=i)).strftime("%m-%d %H:00")
     return head
 
 
@@ -197,10 +198,11 @@ def generate_city_row(city, city_hourly_predict, city_daily_predict):
     row = []
     row.extend(city)
 
-    row.extend([item['text'] for item in city_hourly_predict.get(city[0], [])])
     for day in city_daily_predict.get(city[0], []):
         row.append(day['text_day'])
         row.append(day['text_night'])
+
+    row.extend([item['text'] for item in city_hourly_predict.get(city[0], [])])
 
     return row
 
