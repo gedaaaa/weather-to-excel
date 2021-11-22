@@ -101,7 +101,8 @@ async def fetch_24h_weather_prediction(city_id_location_id_map):
                 city_data.append({
                     'fx_time': data.get('fxTime', None),
                     'text': data.get('text', None),
-                    'wind': data.get('windScale', None)
+                    'wind': data.get('windScale', None),
+                    'temp': data.get('temp', None)
                 })
 
             result[city_id] = city_data
@@ -138,7 +139,9 @@ async def fetch_7d_weather_prediction(city_id_location_id_map):
                     'text_day': data.get('textDay', None),
                     'text_night': data.get('textNight', None),
                     'wind_day': data.get('windScaleDay', None),
-                    'wind_night': data.get('windScaleNight', None)
+                    'wind_night': data.get('windScaleNight', None),
+                    'temp_max': data.get('tempMax', None),
+                    'temp_min': data.get('tempMin', None)
                 })
 
             result[city_id] = city_data
@@ -159,15 +162,21 @@ async def fetch_7d_weather_prediction(city_id_location_id_map):
 
 def generate_header():
     head = ['city_id', '省', '城市']
-    head.extend(['' for _ in range(24 + 7 * 2)])
+    head.extend(['' for _ in range(24 * 2 + 7 * 4)])
 
     now = datetime.datetime.now()
 
     for i in range(7):
-        head[3 + 2 * i] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 白天'
-        head[3 + 2 * i + 1] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 夜间'
+        head[3 + 4 * i] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 白天'
+        head[3 + 4 * i + 1] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 夜间'
+        head[3 + 4 * i + 2] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 最高'
+        head[3 + 4 * i + 3] = (now + datetime.timedelta(days=i)).strftime("%m-%d") + ' 最低'
+
     for i in range(24):
-        head[3 + 7 * 2 + i] = (now + datetime.timedelta(hours=i)).strftime("%m-%d %H:00")
+        head[3 + 7 * 4 + i] = (now + datetime.timedelta(hours=i)).strftime("%m-%d %H:00")
+    for i in range(24):
+        head[3 + 7 * 4 + 24 + i] = (now + datetime.timedelta(hours=i)).strftime("%m-%d %H:00") + ' 气温'
+
     return head
 
 
@@ -201,8 +210,12 @@ def generate_city_row(city, city_hourly_predict, city_daily_predict):
     for day in city_daily_predict.get(city[0], []):
         row.append(day['text_day'])
         row.append(day['text_night'])
+        row.append(day['temp_max'])
+        row.append(day['temp_min'])
 
     row.extend([item['text'] for item in city_hourly_predict.get(city[0], [])])
+    row.extend([item['temp'] for item in city_hourly_predict.get(city[0], [])])
+
 
     return row
 
